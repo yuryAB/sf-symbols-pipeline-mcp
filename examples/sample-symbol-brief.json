@@ -1,0 +1,10 @@
+{
+  "symbolName": "marquei.calendar.confirmed",
+  "semanticIntent": "A calendar day or appointment that has been confirmed by the professional",
+  "appContext": "Used in the Marquei iOS app to indicate confirmed schedules and confirmed client appointments",
+  "baseSymbolCandidate": "calendar.badge.checkmark",
+  "visualStyle": "outline",
+  "renderingModes": ["monochrome", "hierarchical", "palette"],
+  "animationTargets": ["bounce", "replace", "variableColor"],
+  "minimumOS": "iOS 17"
+}

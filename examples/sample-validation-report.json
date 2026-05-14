@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "errors": [],
+  "warnings": [
+    "Heuristic: expected SF Symbols-style template groups should be verified in the SF Symbols app."
+  ],
+  "stats": {
+    "pathCount": 4,
+    "groupCount": 2,
+    "hasViewBox": true,
+    "hasImages": false,
+    "hasText": false,
+    "hasFilters": false,
+    "hasGradients": false,
+    "hasStrokes": false
+  }
+}

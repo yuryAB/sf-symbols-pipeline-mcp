@@ -1,0 +1,33 @@
+{
+  "symbolName": "marquei.calendar.confirmed",
+  "renderingModes": ["monochrome", "hierarchical", "palette"],
+  "layerNames": [
+    "calendar-outline",
+    "calendar-grid",
+    "confirmation-badge",
+    "checkmark"
+  ],
+  "semanticParts": [
+    {
+      "name": "calendar-outline",
+      "role": "primary",
+      "description": "Main calendar enclosure"
+    },
+    {
+      "name": "calendar-grid",
+      "role": "secondary",
+      "description": "Internal date grid"
+    },
+    {
+      "name": "confirmation-badge",
+      "role": "badge",
+      "description": "Confirmation badge container"
+    },
+    {
+      "name": "checkmark",
+      "role": "detail",
+      "description": "Confirmed state mark"
+    }
+  ],
+  "finalValidation": "Apply and verify annotations in the SF Symbols app."
+}

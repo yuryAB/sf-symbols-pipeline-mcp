@@ -1,0 +1,122 @@
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import path from "node:path";
+import { toPrettyJson } from "../output/json.js";
+import {
+  CreateXcassetsSymbolSetInputSchema,
+  type CreateXcassetsSymbolSetInput,
+} from "../schemas/xcode.js";
+import type { Workspace } from "../workspace.js";
+import { normalizeSymbolName } from "./createSymbolBrief.js";
+import { safeTool, toolSuccess } from "./result.js";
+
+export type XcassetsSymbolSetOutput = {
+  assetCatalogPath: string;
+  symbolSetPath: string;
+  contentsJsonPath: string;
+  copiedSvgPath?: string;
+  warnings: string[];
+  writtenFiles: string[];
+};
+
+export async function createXcassetsSymbolSet(
+  workspace: Workspace,
+  input: CreateXcassetsSymbolSetInput,
+): Promise<XcassetsSymbolSetOutput> {
+  const symbolName = normalizeSymbolName(input.symbolName);
+  const warnings: string[] = [];
+
+  if (symbolName !== input.symbolName) {
+    warnings.push(
+      `Symbol folder/file name was normalized from "${input.symbolName}" to "${symbolName}".`,
+    );
+  }
+
+  if (!input.sourceSvgPath) {
+    warnings.push(
+      "No source SVG was copied. Add the final SVG exported from the SF Symbols app before importing in Xcode.",
+    );
+  }
+
+  warnings.push(
+    "Contents.json is a conservative minimal symbolset scaffold. Verify the asset in Xcode.",
+  );
+
+  const assetCatalogRelative = path.join(input.outputDir, "Assets.xcassets");
+  const symbolSetRelative = path.join(
+    assetCatalogRelative,
+    `${symbolName}.symbolset`,
+  );
+  const contentsJsonRelative = path.join(symbolSetRelative, "Contents.json");
+  const svgFilename = `${symbolName}.svg`;
+  const svgRelative = path.join(symbolSetRelative, svgFilename);
+  const overwrite = input.overwrite ?? false;
+
+  await workspace.ensureDir(symbolSetRelative);
+
+  const contentsJson = {
+    symbols: input.sourceSvgPath
+      ? [
+          {
+            idiom: "universal",
+            filename: svgFilename,
+          },
+        ]
+      : [
+          {
+            idiom: "universal",
+          },
+        ],
+    info: {
+      author: "xcode",
+      version: 1,
+    },
+  };
+
+  const writtenFiles = [
+    await workspace.writeText(
+      contentsJsonRelative,
+      toPrettyJson(contentsJson),
+      { overwrite },
+    ),
+  ];
+
+  let copiedSvgPath: string | undefined;
+  if (input.sourceSvgPath) {
+    copiedSvgPath = await workspace.copyFile(input.sourceSvgPath, svgRelative, {
+      overwrite,
+    });
+    writtenFiles.push(copiedSvgPath);
+  }
+
+  return {
+    assetCatalogPath: workspace.resolvePath(assetCatalogRelative),
+    symbolSetPath: workspace.resolvePath(symbolSetRelative),
+    contentsJsonPath: workspace.resolvePath(contentsJsonRelative),
+    copiedSvgPath,
+    warnings,
+    writtenFiles,
+  };
+}
+
+export function registerCreateXcassetsSymbolSetTool(
+  server: McpServer,
+  workspace: Workspace,
+): void {
+  server.registerTool(
+    "create_xcassets_symbol_set",
+    {
+      title: "Create Xcassets Symbol Set",
+      description:
+        "Create a conservative Xcode .symbolset asset catalog scaffold for a custom symbol.",
+      inputSchema: CreateXcassetsSymbolSetInputSchema,
+    },
+    (args) =>
+      safeTool(async () => {
+        const result = await createXcassetsSymbolSet(workspace, args);
+        return toolSuccess(
+          result,
+          `Created Xcode symbol asset scaffold at ${result.symbolSetPath}.`,
+        );
+      }),
+  );
+}
