@@ -27,7 +27,7 @@ Audit workflow:
 4. If variable template sources exist, run compare_variable_sources.
 5. Generate or update an annotation plan for the expected rendering modes.
 6. Generate a Draw/Variable Draw plan if requested.
-7. Produce a prioritized fix plan for Figma edits, SF Symbols app annotations, and Xcode import.
+7. Produce a prioritized fix plan for vector-editor edits, SF Symbols app annotations, and Xcode import.
 
 Do not claim the symbol is SF Symbols-app validated unless the user provides evidence from the SF Symbols app.`;
 }

@@ -40,7 +40,7 @@ Planning workflow:
 3. Recommend base SF Symbols candidates for each symbol where possible.
 4. Keep rendering mode strategy consistent across the family.
 5. Identify which symbols should support replace, variableColor, Draw, or whole-symbol effects.
-6. Create symbol briefs before Figma drawing.
+6. Resolve the vector editing environment and create symbol briefs before drawing.
 7. Validate each exported SVG, generate annotation plans, and test in Xcode.
 
 Preserve consistency, but do not flatten meaningful semantic differences just to force identical geometry.`;

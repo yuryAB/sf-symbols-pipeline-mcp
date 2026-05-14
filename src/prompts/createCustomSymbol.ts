@@ -35,23 +35,26 @@ Animation targets: ${(input.animationTargets ?? []).join(", ") || "None specifie
 Minimum OS: ${input.minimumOS ?? "Not specified"}
 
 Workflow:
-1. Create a normalized symbol brief with create_symbol_brief.
-2. Choose an official SF Symbols template/base strategy before drawing.
-3. Use the official Figma MCP only for Figma drawing/editing.
-4. Preserve semantic layer names and path order while editing.
-5. Export SVG from Figma.
-6. Run validate_svg_template and inspect_svg_geometry on the exported SVG.
-7. If using variable templates, compare Ultralight-S, Regular-S, and Black-S sources with compare_variable_sources.
-8. Generate an annotation plan for requested rendering modes.
-9. Generate a Draw/Variable Draw guide plan if draw or variableDraw is requested.
-10. Generate an import checklist.
-11. Import and validate in the SF Symbols app.
-12. Apply rendering and animation annotations in the SF Symbols app; do not claim they are applied until validated there.
-13. Export the final symbol from the SF Symbols app.
-14. Prepare the Xcode asset catalog and Swift examples.
+1. Run resolve_design_environment to determine the vector editor/tooling and Apple SF Symbols setup.
+2. Create a normalized symbol brief with create_symbol_brief.
+3. Choose an official SF Symbols template/base strategy before drawing.
+4. Use the SF Symbols app to export the template for the closest base symbol when possible.
+5. Draw/edit in the selected SVG-capable vector editor.
+6. Preserve semantic layer names and path order while editing.
+7. Export SVG from the selected vector editor.
+8. Run validate_svg_template and inspect_svg_geometry on the exported SVG.
+9. If using variable templates, compare Ultralight-S, Regular-S, and Black-S sources with compare_variable_sources.
+10. Generate an annotation plan for requested rendering modes.
+11. Generate a Draw/Variable Draw guide plan if draw or variableDraw is requested.
+12. Generate an import checklist.
+13. Import and validate in the SF Symbols app.
+14. Apply rendering and animation annotations in the SF Symbols app; do not claim they are applied until validated there.
+15. Export the final symbol from the SF Symbols app.
+16. Prepare the Xcode asset catalog and Swift examples.
 
 Important constraints:
 - Treat this as an SF Symbols template pipeline, not generic SVG creation.
+- This MCP does not operate vector editors directly; use the agent's available editor/MCP/tooling.
 - Prefer closed filled paths and outlined strokes.
 - Avoid raster images, live text, filters, blur, shadows, fragile masks, and manual gradients.
 - Use Xcode asset catalogs as the app delivery mechanism.`;

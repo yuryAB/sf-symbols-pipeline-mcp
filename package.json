@@ -23,7 +23,9 @@
     "sf-symbols",
     "ios",
     "xcode",
-    "figma",
+    "svg",
+    "vector-editor",
+    "custom-symbols",
     "swiftui"
   ],
   "files": [

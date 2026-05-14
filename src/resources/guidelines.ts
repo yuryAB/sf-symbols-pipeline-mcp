@@ -14,7 +14,7 @@ export const guidelineResources: StaticResource[] = [
 
 A custom SF Symbol is not a generic SVG. It should begin from an official SF Symbols template whenever possible and should preserve symbol semantics throughout editing.
 
-Use Figma as a vector editor, not as the final source of truth. The SF Symbols app remains responsible for import, validation, annotations, previews, and final export. Xcode asset catalogs are the final app delivery mechanism.
+Use the selected vector editor for drawing only, not as the final source of truth. The SF Symbols app remains responsible for template export, import, validation, annotations, previews, and final export. Xcode asset catalogs are the final app delivery mechanism.
 
 Core rules:
 - Preserve semantic layer names and path order.
@@ -25,15 +25,39 @@ Core rules:
 `,
   },
   {
+    uri: "sf-symbols://guidelines/vector-editor-to-sf-symbols",
+    name: "vector-editor-to-sf-symbols-guidelines",
+    title: "Vector Editor To SF Symbols Workflow",
+    text: `# Vector Editor To SF Symbols Workflow
+
+Use any SVG-capable vector editor that the agent can reliably operate. This can be Figma, Illustrator, Sketch, Affinity Designer, Inkscape, or another tool that preserves SVG paths and layer structure.
+
+Recommended flow:
+- If the user did not specify an editor, inspect the agent's available tools/connectors and choose the best available SVG-capable vector editor.
+- Open the installed official SF Symbols app; use Apple's official download page only if the app is missing or outdated.
+- Choose the closest base symbol in the SF Symbols app and export its template before drawing.
+- Draw Regular-S first unless a variable template requires coordinated Ultralight-S, Regular-S, and Black-S sources.
+- Keep layers named by semantic part, not by visual accident.
+- Convert final strokes and text to paths before export.
+- Export SVG from the selected vector editor.
+- Run validation and geometry inspection here.
+- Import into the SF Symbols app for template validation and annotation.
+- Export the final symbol from the SF Symbols app.
+- Add the final SVG to an Xcode asset catalog when the user wants app integration.
+`,
+  },
+  {
     uri: "sf-symbols://guidelines/figma-to-sf-symbols",
     name: "figma-to-sf-symbols-guidelines",
     title: "Figma To SF Symbols Workflow",
     text: `# Figma To SF Symbols Workflow
 
-Use the official Figma MCP for Figma operations. This server works with exported SVG files, JSON manifests, and local project folders.
+Compatibility resource for existing Figma-oriented workflows. Prefer sf-symbols://guidelines/vector-editor-to-sf-symbols for new editor-agnostic workflows.
+
+Use the official Figma MCP for Figma operations when Figma is the selected editor. This server works with exported SVG files, JSON manifests, and local project folders.
 
 Recommended flow:
-- Start from an official SF Symbols template or a close base symbol.
+- Start from an official SF Symbols template exported from the SF Symbols app or a close base symbol.
 - Draw Regular-S first.
 - Keep layers named by semantic part, not by visual accident.
 - Export SVG from Figma.
@@ -41,6 +65,24 @@ Recommended flow:
 - Import into the SF Symbols app for template validation and annotation.
 - Export the final symbol from the SF Symbols app.
 - Add the final SVG to an Xcode asset catalog.
+`,
+  },
+  {
+    uri: "sf-symbols://resources/apple-official-links",
+    name: "apple-official-links",
+    title: "Apple Official Links",
+    text: `# Apple Official Links
+
+- SF Symbols app: https://developer.apple.com/sf-symbols/
+- Human Interface Guidelines: SF Symbols: https://developer.apple.com/design/human-interface-guidelines/sf-symbols
+- Creating custom symbol images for your app: https://developer.apple.com/documentation/uikit/creating-custom-symbol-images-for-your-app
+
+Template guidance:
+- There is no single universal official Apple template for every custom symbol.
+- Open the installed SF Symbols app, choose the closest base symbol, and export that symbol's template.
+- Use Apple's official SF Symbols download page only if the app is missing or outdated.
+- Use the exported template as the source for vector editing.
+- Return to the SF Symbols app for validation, annotation, preview, and final export.
 `,
   },
   {

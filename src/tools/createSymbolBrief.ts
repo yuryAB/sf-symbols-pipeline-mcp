@@ -64,8 +64,10 @@ export async function createSymbolBrief(
 
   const recommendedWorkflow = [
     "Start from an official SF Symbols template or a close base symbol.",
-    "Use the official Figma MCP for drawing/editing only.",
-    "Export SVG from Figma.",
+    "Resolve the available SVG-capable vector editor or help the user set one up.",
+    "Use the SF Symbols app to export the template for the selected base symbol when possible.",
+    "Draw/edit in the selected vector editor while preserving template structure.",
+    "Export SVG from the selected vector editor.",
     "Run validate_svg_template and inspect_svg_geometry.",
     "Generate annotation and import plans.",
     "Import, annotate, preview, and validate in the SF Symbols app.",
@@ -91,7 +93,7 @@ export async function createSymbolBrief(
     minimumOS: input.minimumOS,
     principles: [
       "A custom SF Symbol is not a generic SVG.",
-      "Use Figma as a vector editor, not the final source of truth.",
+      "Use the selected vector editor for drawing only, not as the final source of truth.",
       "Use the SF Symbols app for import, validation, annotations, previews, and final export.",
       "Use an Xcode asset catalog as the final app delivery mechanism.",
     ],

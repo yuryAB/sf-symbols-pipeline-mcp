@@ -19,10 +19,10 @@ export async function generateImportChecklist(
   input: GenerateImportChecklistInput,
 ): Promise<ImportChecklistOutput> {
   const sections = {
-    figmaExport: [
+    vectorExport: [
       "Start from or align to an official SF Symbols template.",
       "Preserve semantic layer names and path order.",
-      "Export SVG from Figma after converting final strokes/text to paths.",
+      "Export SVG from the selected vector editor after converting final strokes/text to paths.",
     ],
     svgSanity: [
       "Run validate_svg_template.",
@@ -77,7 +77,7 @@ export async function generateImportChecklist(
       "Verify palette/multicolor choices against app backgrounds.",
     ],
     qaSignOff: [
-      "Confirm Figma source, SF Symbols app export, Xcode asset, and Swift snippets are aligned.",
+      "Confirm vector editor source, SF Symbols app export, Xcode asset, and Swift snippets are aligned.",
       "Record any known limitations.",
       "Designer/engineer sign-off complete.",
     ],
