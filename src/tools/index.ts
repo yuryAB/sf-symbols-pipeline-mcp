@@ -9,9 +9,11 @@ import { registerGenerateImportChecklistTool } from "./generateImportChecklist.j
 import { registerGenerateMagicReplacePlanTool } from "./generateMagicReplacePlan.js";
 import { registerGenerateSwiftUsageTool } from "./generateSwiftUsage.js";
 import { registerInspectSvgGeometryTool } from "./inspectSvgGeometry.js";
+import { registerResolveDesignEnvironmentTool } from "./resolveDesignEnvironment.js";
 import { registerValidateSvgTemplateTool } from "./validateSvgTemplate.js";
 
 export function registerTools(server: McpServer, workspace: Workspace): void {
+  registerResolveDesignEnvironmentTool(server);
   registerCreateSymbolBriefTool(server, workspace);
   registerValidateSvgTemplateTool(server, workspace);
   registerInspectSvgGeometryTool(server, workspace);

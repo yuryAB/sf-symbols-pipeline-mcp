@@ -2,11 +2,13 @@
 
 MCP server for a custom SF Symbols pipeline.
 
-This server helps agents create, validate, document, and prepare custom SF Symbols for iOS app workflows using Figma, the SF Symbols app, Xcode asset catalogs, SwiftUI, and UIKit.
+This server helps agents create, validate, document, and prepare custom SF Symbols for iOS app workflows using any SVG-capable vector editor, the SF Symbols app, Xcode asset catalogs, SwiftUI, and UIKit.
 
 ## What This MCP Does
 
 - Exposes reusable SF Symbols pipeline resources and checklists.
+- Helps agents choose or set up a vector editor before drawing.
+- Points agents to official Apple SF Symbols resources and template-export guidance.
 - Provides workflow prompts for creating, auditing, and preparing symbol families.
 - Validates exported SVGs with practical preflight checks.
 - Inspects SVG groups, paths, names, fills, strokes, and heuristic path structure.
@@ -15,16 +17,18 @@ This server helps agents create, validate, document, and prepare custom SF Symbo
 
 ## What This MCP Does Not Do
 
-- It does not replace the official Figma MCP.
-- It does not operate Figma directly.
+- It does not replace editor-specific MCPs or design tools.
+- It does not operate Figma, Illustrator, Sketch, Affinity Designer, Inkscape, or other vector editors directly.
 - It does not replace the Apple SF Symbols app.
 - It does not claim full Apple template validation.
 - It does not apply final SF Symbols annotations automatically.
 - It does not upload files, run telemetry, execute arbitrary shell commands, or access files outside the configured workspace.
 
-## Figma MCP Relationship
+## Vector Editor Relationship
 
-Use the official Figma MCP to create or edit vector designs in Figma. This MCP starts after export: it works with SVG files, JSON reports, and local project folders. Treat Figma as a vector editor and the SF Symbols app as the validation, annotation, preview, and final export authority.
+Use whichever SVG-capable vector editor the agent can reliably operate: Figma, Illustrator, Sketch, Affinity Designer, Inkscape, or another tool that preserves SVG paths and layer structure. This MCP can guide editor selection with `resolve_design_environment`, but it does not inspect the host agent's tools by itself. Pass available editor/tool hints when possible.
+
+Treat the selected vector editor as a drawing surface. The SF Symbols app remains the authority for template export, import, validation, annotation, preview, and final export.
 
 ## Install
 
@@ -122,31 +126,35 @@ npx @modelcontextprotocol/inspector node dist/index.js
 
 ## Example Workflow
 
-1. Use the official Figma MCP to create or edit the symbol design in Figma.
-2. Export the SVG from Figma.
-3. Run `validate_svg_template`.
-4. Run `inspect_svg_geometry`.
-5. If using variable templates, run `compare_variable_sources`.
-6. Run `generate_annotation_plan`.
-7. If using Draw/Variable Draw, run `generate_draw_guide_plan`.
-8. Run `generate_import_checklist`.
-9. Import the SVG into the SF Symbols app.
-10. Validate the template in the SF Symbols app.
-11. Apply rendering/animation annotations manually or semi-manually.
-12. Export final symbol from SF Symbols app.
-13. Run `create_xcassets_symbol_set`.
-14. Run `generate_swift_usage`.
-15. Test in Xcode previews/device.
+1. Run `resolve_design_environment` to choose the vector editor/tooling and get official Apple links.
+2. Use the SF Symbols app to export the template for the closest base symbol.
+3. Create or edit the symbol design in the selected SVG-capable vector editor.
+4. Export the SVG from the selected vector editor.
+5. Run `validate_svg_template`.
+6. Run `inspect_svg_geometry`.
+7. If using variable templates, run `compare_variable_sources`.
+8. Run `generate_annotation_plan`.
+9. If using Draw/Variable Draw, run `generate_draw_guide_plan`.
+10. Run `generate_import_checklist`.
+11. Import the SVG into the SF Symbols app.
+12. Validate the template in the SF Symbols app.
+13. Apply rendering/animation annotations manually or semi-manually.
+14. Export final symbol from SF Symbols app.
+15. Run `create_xcassets_symbol_set` when an asset catalog or Xcode integration is needed.
+16. Run `generate_swift_usage`.
+17. Test in Xcode previews/device.
 
 ## Resources
 
 - `sf-symbols://guidelines/custom-symbols`
+- `sf-symbols://guidelines/vector-editor-to-sf-symbols`
 - `sf-symbols://guidelines/figma-to-sf-symbols`
 - `sf-symbols://guidelines/path-compatibility`
 - `sf-symbols://guidelines/rendering-modes`
 - `sf-symbols://guidelines/animation-readiness`
 - `sf-symbols://guidelines/draw-and-variable-draw`
 - `sf-symbols://guidelines/xcode-import`
+- `sf-symbols://resources/apple-official-links`
 - `sf-symbols://checklists/import-ready`
 - `sf-symbols://checklists/animation-ready`
 - `sf-symbols://checklists/qa`
@@ -162,6 +170,14 @@ npx @modelcontextprotocol/inspector node dist/index.js
 - `generate_icon_family`: plan coherent naming, structure, rendering, and animation for a family.
 
 ## Tool Reference
+
+### `resolve_design_environment`
+
+Returns structured guidance for the agent before drawing: recommended vector editor, confidence, next steps, setup instructions, official Apple links, and warnings.
+
+Inputs include `symbolName`, optional `userRequestedEditor`, optional `availableAgentTools`, optional `platform`, and optional `needsSetupHelp`.
+
+The tool assumes the normal path is macOS with SF Symbols already installed. It does not inspect installed MCPs or local apps automatically. If the user did not specify an editor, the calling agent should pass known tools/connectors or use the output to choose an available SVG-capable editor.
 
 ### `create_symbol_brief`
 
@@ -226,7 +242,7 @@ Optionally writes:
 
 ### `generate_import_checklist`
 
-Generates a final import/testing checklist covering Figma export, SVG sanity, SF Symbols app validation, rendering annotations, draw annotations, Xcode import, SwiftUI usage, animation tests, accessibility, light/dark mode, and QA sign-off.
+Generates a final import/testing checklist covering vector-editor export, SVG sanity, SF Symbols app validation, rendering annotations, draw annotations, Xcode import, SwiftUI usage, animation tests, accessibility, light/dark mode, and QA sign-off.
 
 Optionally writes `import-checklist.md` and `import-checklist.json`.
 
@@ -251,7 +267,7 @@ Optionally writes `import-checklist.md` and `import-checklist.json`.
 
 ## Roadmap
 
-- Direct Figma API integration.
+- Optional editor-specific adapters where they add value.
 - Richer path compatibility checks.
 - Automatic SVG normalization.
 - SF Symbols app automation if feasible.
