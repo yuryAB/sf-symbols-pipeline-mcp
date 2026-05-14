@@ -27,6 +27,7 @@
     "swiftui"
   ],
   "files": [
+    "assets",
     "dist",
     "examples",
     "README.md"
