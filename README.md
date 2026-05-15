@@ -1,21 +1,30 @@
-# sf-symbols-pipeline-mcp
+# SF Symbols Pipeline MCP
 
-MCP server for a custom SF Symbols pipeline.
+SF Symbols Pipeline MCP is a platform-agnostic Model Context Protocol server for custom SF Symbols workflows. It helps agents and MCP clients choose an SVG-capable vector workflow, validate exported SVGs, inspect symbol geometry, create repeatable pipeline reports, and generate Xcode and Swift helper artifacts.
 
-This server helps agents create, validate, document, and prepare custom SF Symbols for iOS app workflows using any SVG-capable vector editor, the SF Symbols app, Xcode asset catalogs, SwiftUI, and UIKit.
+The project is MCP first. Codex Plugin support is an optional integration layer for discovery and branding inside Codex, not the core distribution model.
 
-## What This MCP Does
+## What is SF Symbols Pipeline MCP
 
-- Exposes reusable SF Symbols pipeline resources and checklists.
-- Helps agents choose or set up a vector editor before drawing.
+This repository packages a TypeScript/Node MCP server that runs over stdio. Any MCP client that can launch a local command can use it with:
+
+```bash
+npx -y github:yuryAB/sf-symbols-pipeline-mcp
+```
+
+The server exposes MCP tools, resources, and prompts for iOS and macOS teams preparing custom SF Symbols from design exports.
+
+## What it does
+
+- Helps agents choose or set up an SVG-capable vector editor before drawing.
 - Points agents to official Apple SF Symbols resources and template-export guidance.
-- Provides workflow prompts for creating, auditing, and preparing symbol families.
-- Validates exported SVGs with practical preflight checks.
-- Inspects SVG groups, paths, names, fills, strokes, and heuristic path structure.
-- Compares Ultralight-S, Regular-S, and Black-S variable-template sources.
-- Generates annotation plans, Draw/Variable Draw guide plans, import checklists, Xcode asset scaffolds, and Swift snippets.
+- Validates exported SVG files with practical SF Symbols readiness checks.
+- Inspects SVG groups, paths, ids, fills, strokes, and path complexity.
+- Compares variable symbol sources such as Ultralight-S, Regular-S, and Black-S.
+- Generates annotation plans, Draw and Variable Draw guide plans, import checklists, Xcode asset scaffolds, and SwiftUI/UIKit snippets.
+- Constrains all file reads and writes to `SF_SYMBOLS_WORKSPACE` or the process current working directory.
 
-## What This MCP Does Not Do
+## What it does not do
 
 - It does not replace editor-specific MCPs or design tools.
 - It does not operate Figma, Illustrator, Sketch, Affinity Designer, Inkscape, or other vector editors directly.
@@ -24,107 +33,145 @@ This server helps agents create, validate, document, and prepare custom SF Symbo
 - It does not apply final SF Symbols annotations automatically.
 - It does not upload files, run telemetry, execute arbitrary shell commands, or access files outside the configured workspace.
 
-## Vector Editor Relationship
+## Who it is for
+
+Use this server if you build custom symbols for Apple platforms and want repeatable checks between design tools, the SF Symbols app, Xcode asset catalogs, SwiftUI, and UIKit.
+
+It is useful for Codex, Claude Desktop, Claude Code, Cursor, Windsurf, other MCP clients, and custom agents.
+
+## Vector editor relationship
 
 Use whichever SVG-capable vector editor the agent can reliably operate: Figma, Illustrator, Sketch, Affinity Designer, Inkscape, or another tool that preserves SVG paths and layer structure. This MCP can guide editor selection with `resolve_design_environment`, but it does not inspect the host agent's tools by itself. Pass available editor/tool hints when possible.
 
 Treat the selected vector editor as a drawing surface. The SF Symbols app remains the authority for template export, import, validation, annotation, preview, and final export.
 
-## Install
+## Use with any MCP client
 
-Use directly from GitHub:
+Configure a stdio MCP server with:
+
+```json
+{
+  "mcpServers": {
+    "sf-symbols-pipeline": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:yuryAB/sf-symbols-pipeline-mcp"],
+      "env": {
+        "SF_SYMBOLS_WORKSPACE": "/absolute/path/to/icon-workspace"
+      }
+    }
+  }
+}
+```
+
+If `SF_SYMBOLS_WORKSPACE` is omitted, the server uses the process current working directory. Many desktop clients spawn MCP servers from their own app directory, so an explicit workspace is recommended.
+
+## Use with Claude Desktop
+
+Claude Desktop local MCP configuration uses `claude_desktop_config.json`. Add the server under `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "sf-symbols-pipeline": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:yuryAB/sf-symbols-pipeline-mcp"],
+      "env": {
+        "SF_SYMBOLS_WORKSPACE": "/absolute/path/to/icon-workspace"
+      }
+    }
+  }
+}
+```
+
+Remote Claude connectors are separate from local `claude_desktop_config.json` servers. This package currently documents the stdio command path.
+
+## Use with Cursor
+
+Create `.cursor/mcp.json` in a project or `~/.cursor/mcp.json` globally:
+
+```json
+{
+  "mcpServers": {
+    "sf-symbols-pipeline": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:yuryAB/sf-symbols-pipeline-mcp"],
+      "env": {
+        "SF_SYMBOLS_WORKSPACE": "/absolute/path/to/icon-workspace"
+      }
+    }
+  }
+}
+```
+
+## Use with Windsurf
+
+Open Windsurf Cascade's raw MCP config, usually `~/.codeium/windsurf/mcp_config.json`, and add:
+
+```json
+{
+  "mcpServers": {
+    "sf-symbols-pipeline": {
+      "command": "npx",
+      "args": ["-y", "github:yuryAB/sf-symbols-pipeline-mcp"],
+      "env": {
+        "SF_SYMBOLS_WORKSPACE": "/absolute/path/to/icon-workspace"
+      }
+    }
+  }
+}
+```
+
+## Use with Codex
+
+As a normal MCP server, configure Codex to launch:
 
 ```bash
 npx -y github:yuryAB/sf-symbols-pipeline-mcp
 ```
 
-Or clone and install locally:
+The optional Codex Plugin lives in `plugins/codex/`. It bundles a Codex skill and `.mcp.json` that point back to this same independent MCP server.
 
-```bash
-npm install
-```
-
-## Build
-
-```bash
-npm run build
-```
-
-## Local Usage
-
-Run the server over stdio:
-
-```bash
-npm run build
-node dist/index.js
-```
-
-For development:
-
-```bash
-npm run dev
-```
-
-The server uses `SF_SYMBOLS_WORKSPACE` as the allowed root for all tool file reads and writes:
-
-```bash
-SF_SYMBOLS_WORKSPACE=/absolute/path/to/icon-workspace node dist/index.js
-```
-
-If `SF_SYMBOLS_WORKSPACE` is missing, the server defaults to the current working directory. Every file path is normalized and checked so tools cannot escape the workspace with `../` or absolute paths outside the root.
-
-## Test With MCP Inspector
-
-```bash
-npm run build
-npx @modelcontextprotocol/inspector node dist/index.js
-```
-
-To use a separate icon workspace:
-
-```bash
-SF_SYMBOLS_WORKSPACE=/absolute/path/to/icon-workspace npx @modelcontextprotocol/inspector node dist/index.js
-```
-
-## Add To Codex
-
-Add an MCP server in Codex with this command:
-
-```bash
-npx -y github:yuryAB/sf-symbols-pipeline-mcp
-```
-
-If you cloned the repository locally, use:
-
-```bash
-node /absolute/path/to/sf-symbols-pipeline-mcp/dist/index.js
-```
-
-Optional environment variable:
-
-```bash
-SF_SYMBOLS_WORKSPACE=/absolute/path/to/icon-workspace
-```
-
-`SF_SYMBOLS_WORKSPACE` should point to the folder that contains exported SVGs, reports, and generated Xcode/Swift artifacts. If it is missing, the server uses the process current working directory.
-
-## Use From MCP Inspector
-
-Run from GitHub:
+## Use directly with npx from GitHub
 
 ```bash
 SF_SYMBOLS_WORKSPACE=/absolute/path/to/icon-workspace \
-npx @modelcontextprotocol/inspector npx -y github:yuryAB/sf-symbols-pipeline-mcp
+npx -y github:yuryAB/sf-symbols-pipeline-mcp
 ```
 
-Run from a local clone:
+For help:
 
 ```bash
-npm run build
-npx @modelcontextprotocol/inspector node dist/index.js
+npx -y github:yuryAB/sf-symbols-pipeline-mcp --help
 ```
 
-## Example Workflow
+## Future npm usage
+
+The package is prepared for npm publication but is not published by this repository change. After publication, the simpler command should be:
+
+```bash
+npx -y sf-symbols-pipeline-mcp
+```
+
+Until then, use the GitHub `npx` command.
+
+## Available tools
+
+- `resolve_design_environment`
+- `create_symbol_brief`
+- `validate_svg_template`
+- `inspect_svg_geometry`
+- `compare_variable_sources`
+- `generate_annotation_plan`
+- `generate_draw_guide_plan`
+- `generate_magic_replace_plan`
+- `create_xcassets_symbol_set`
+- `generate_swift_usage`
+- `generate_import_checklist`
+
+## Example workflow
 
 1. Run `resolve_design_environment` to choose the vector editor/tooling and get official Apple links.
 2. Use the SF Symbols app to export the template for the closest base symbol.
@@ -169,15 +216,13 @@ npx @modelcontextprotocol/inspector node dist/index.js
 - `prepare_magic_replace_family`: plan a replace-friendly symbol family.
 - `generate_icon_family`: plan coherent naming, structure, rendering, and animation for a family.
 
-## Tool Reference
+## Tool reference
 
 ### `resolve_design_environment`
 
 Returns structured guidance for the agent before drawing: recommended vector editor, confidence, next steps, setup instructions, official Apple links, and warnings.
 
 Inputs include `symbolName`, optional `userRequestedEditor`, optional `availableAgentTools`, optional `platform`, and optional `needsSetupHelp`.
-
-The tool assumes the normal path is macOS with SF Symbols already installed. It does not inspect installed MCPs or local apps automatically. If the user did not specify an editor, the calling agent should pass known tools/connectors or use the output to choose an available SVG-capable editor.
 
 ### `create_symbol_brief`
 
@@ -234,53 +279,58 @@ The SVG is copied only when `sourceSvgPath` is provided. Existing files are not 
 
 Generates SwiftUI and UIKit snippets. SwiftUI examples use `Image("symbolName")`, not `Image(systemName:)`. UIKit examples use `UIImage(named:)`, not system-name loading.
 
-Optionally writes:
-
-- `SwiftUsage.md`
-- `SymbolUsageExamples.swift`
-- `SymbolAnimationPreview.swift`
-
 ### `generate_import_checklist`
 
-Generates a final import/testing checklist covering vector-editor export, SVG sanity, SF Symbols app validation, rendering annotations, draw annotations, Xcode import, SwiftUI usage, animation tests, accessibility, light/dark mode, and QA sign-off.
+Generates a final import/testing checklist covering vector editor export, SVG sanity, SF Symbols app validation, rendering annotations, draw annotations, Xcode import, SwiftUI usage, animation tests, accessibility, light/dark mode, and QA sign-off.
 
-Optionally writes `import-checklist.md` and `import-checklist.json`.
+## Requirements
 
-## Security Notes
+- Node.js 20 or newer.
+- An MCP client that supports stdio command servers.
+- A workspace folder containing exported SVGs and generated reports.
 
-- No network dependency at runtime.
-- No arbitrary shell execution from MCP tool inputs.
-- No `eval`.
-- No telemetry.
-- No auto-uploading.
-- No secret exposure.
-- All file reads and writes are limited to `SF_SYMBOLS_WORKSPACE` or the process current working directory if the env var is not set.
+## Troubleshooting
+
+- If the client cannot start the server, verify `node`, `npm`, and `npx` are available in the environment used by the desktop app.
+- If tools cannot find files, set `SF_SYMBOLS_WORKSPACE` to an absolute workspace path.
+- If GitHub `npx` is slow, publish to npm or pin a GitHub tag once releases are created.
+- If a client ignores visual metadata, that is client-dependent behavior.
+
+## Security / permissions
+
+- No runtime network calls are made by the MCP tools.
+- No telemetry, uploads, arbitrary shell execution, or `eval`.
+- File reads and writes are constrained to the configured workspace root.
 - Existing generated files are not overwritten unless a tool explicitly supports and receives `overwrite: true`.
 
-## Known Limitations
+## Versioning
 
-- SVG validation is a practical v1 preflight, not a complete SF Symbols validator.
-- Path point counts are estimated from SVG path command data.
-- The server cannot verify final SF Symbols app annotations unless future file formats expose that data and support validation.
-- Swift symbol effect snippets are starter examples; verify exact API availability and spelling in your target Xcode SDK.
-- Xcode asset scaffolds are conservative and should be verified in Xcode.
+GitHub `npx` from `main` follows the branch and can change. Prefer tags or npm releases for stable external users.
 
-## Roadmap
-
-- Optional editor-specific adapters where they add value.
-- Richer path compatibility checks.
-- Automatic SVG normalization.
-- SF Symbols app automation if feasible.
-- Xcode project integration.
-- Generated Swift previews.
-- Icon family visual reports.
-
-## Development
+Future npm releases should follow semver and be validated with:
 
 ```bash
 npm install
 npm run build
 npm test
-npm run lint
-npm run format
+npm pack --dry-run
 ```
+
+## Assets / branding
+
+Public MCP metadata references PNG icons under `assets/`. MCP clients may display or ignore these icons. The optional Codex Plugin has its own `composerIcon`, `logo`, `brandColor`, and `displayName` metadata under `plugins/codex/`.
+
+## Difference between MCP server and Codex Plugin
+
+The MCP server is the product: a reusable, client-agnostic tool server.
+
+The Codex Plugin is an optional wrapper that improves discovery and usage inside Codex by bundling a skill, plugin metadata, and an MCP server config. It does not replace npm/GitHub distribution and should not be required by Claude, Cursor, Windsurf, or custom MCP clients.
+
+## Documentation
+
+- `docs/compatibility.md`
+- `docs/publishing.md`
+- `docs/clients/claude-desktop.md`
+- `docs/clients/cursor.md`
+- `docs/clients/windsurf.md`
+- `docs/clients/generic-mcp.md`
