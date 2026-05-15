@@ -5,6 +5,9 @@ export const ValidateSvgTemplateInputSchema = z.object({
   svgPath: WorkspacePathSchema,
   expectedSymbolName: z.string().min(1).optional(),
   strict: z.boolean().optional(),
+  stage: z.enum(["artwork-svg", "sf-symbol-template-svg"]).optional(),
+  targetGlyph: z.string().min(1).optional(),
+  requiresVariableTemplate: z.boolean().optional(),
   outputDir: OutputDirSchema,
 });
 

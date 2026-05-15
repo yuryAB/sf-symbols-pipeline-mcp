@@ -9,7 +9,7 @@ export const checklistResources: StaticResource[] = [
 
 - Exported SVG is based on an SF Symbols template.
 - No raster images are present.
-- No live text is present.
+- No live artwork text is present; SF Symbols template metadata text remains inside Notes only.
 - Live strokes are outlined.
 - Paths are preferably closed and filled.
 - No fragile filters, shadows, blur, masks, or manual gradients are required.
@@ -17,6 +17,7 @@ export const checklistResources: StaticResource[] = [
 - Rendering annotations are planned.
 - SF Symbols app import and template validation are complete.
 - Final SF Symbols app export is ready for Xcode.
+- Final SVG passes validate_svg_template with stage: "sf-symbol-template-svg".
 `,
   },
   {

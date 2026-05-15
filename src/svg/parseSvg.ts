@@ -6,6 +6,7 @@ export type SvgElement = {
   name: string;
   attrs: SvgAttributes;
   children: SvgElement[];
+  text?: string;
 };
 
 export type SvgDocument = {
@@ -35,11 +36,13 @@ export function parseSvgDocument(
   svgText: string,
   sourcePath?: string,
 ): SvgDocument {
-  if (/<!DOCTYPE/i.test(svgText) || /<!ENTITY/i.test(svgText)) {
-    throw new SvgParseError("SVG contains a DOCTYPE or ENTITY declaration.");
+  if (/<!ENTITY/i.test(svgText)) {
+    throw new SvgParseError("SVG contains an ENTITY declaration.");
   }
 
-  const validation = XMLValidator.validate(svgText, {
+  const safeSvgText = stripSafeSvgDoctype(svgText);
+
+  const validation = XMLValidator.validate(safeSvgText, {
     allowBooleanAttributes: true,
   });
 
@@ -49,7 +52,7 @@ export function parseSvgDocument(
     );
   }
 
-  const parsed = parser.parse(svgText) as unknown;
+  const parsed = parser.parse(safeSvgText) as unknown;
   const nodes = orderedNodesToElements(parsed);
   const root = nodes.find((node) => node.name.toLowerCase() === "svg");
 
@@ -116,19 +119,83 @@ function orderedNodesToElements(value: unknown): SvgElement[] {
     const attrs = normalizeAttrs(record[":@"]);
 
     for (const [key, childValue] of Object.entries(record)) {
-      if (key === ":@" || key === "#text" || key === "?xml") {
+      if (
+        key === ":@" ||
+        key === "#text" ||
+        key === "#comment" ||
+        key === "?xml"
+      ) {
         continue;
       }
 
+      const text = orderedNodeText(childValue);
       elements.push({
         name: key,
         attrs,
         children: orderedNodesToElements(childValue),
+        ...(text ? { text } : {}),
       });
     }
   }
 
   return elements;
+}
+
+function orderedNodeText(value: unknown): string | undefined {
+  const parts: string[] = [];
+
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        visit(child);
+      }
+      return;
+    }
+
+    if (!node || typeof node !== "object") {
+      return;
+    }
+
+    for (const [key, childValue] of Object.entries(
+      node as Record<string, unknown>,
+    )) {
+      if (key === "#text") {
+        parts.push(String(childValue));
+        continue;
+      }
+
+      if (key === ":@" || key === "#comment" || key === "?xml") {
+        continue;
+      }
+
+      visit(childValue);
+    }
+  };
+
+  visit(value);
+
+  const text = parts.join(" ").replace(/\s+/g, " ").trim();
+  return text.length > 0 ? text : undefined;
+}
+
+const SAFE_SVG_DOCTYPE =
+  /<!DOCTYPE\s+svg\s+(?:PUBLIC\s+"-\/\/W3C\/\/DTD SVG 1\.1\/\/EN"\s+"http:\/\/www\.w3\.org\/Graphics\/SVG\/1\.1\/DTD\/svg11\.dtd"|SYSTEM\s+"http:\/\/www\.w3\.org\/Graphics\/SVG\/1\.1\/DTD\/svg11\.dtd")\s*>/gi;
+
+function stripSafeSvgDoctype(svgText: string): string {
+  const doctypeMatches = svgText.match(/<!DOCTYPE[\s\S]*?>/gi);
+  if (!doctypeMatches) {
+    return svgText;
+  }
+
+  for (const doctype of doctypeMatches) {
+    if (!doctype.match(SAFE_SVG_DOCTYPE)) {
+      throw new SvgParseError(
+        "SVG contains an unsupported DOCTYPE declaration.",
+      );
+    }
+  }
+
+  return svgText.replace(SAFE_SVG_DOCTYPE, "");
 }
 
 function normalizeAttrs(value: unknown): SvgAttributes {

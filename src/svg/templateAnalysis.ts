@@ -51,13 +51,78 @@ export type SvgStats = {
   hasStrokes: boolean;
 };
 
+export type ValidationStage = "artwork-svg" | "sf-symbol-template-svg";
+
+export type ValidateTemplateOptions = {
+  expectedSymbolName?: string;
+  strict?: boolean;
+  stage?: ValidationStage;
+  targetGlyph?: string;
+  requiresVariableTemplate?: boolean;
+};
+
+export type TemplateTextSummary = {
+  id?: string;
+  text?: string;
+  parentGroups: string[];
+};
+
+export type SfSymbolTemplateReport = {
+  targetGlyph: string;
+  requiredGroups: Record<"Notes" | "Guides" | "Symbols", boolean>;
+  metadata: {
+    hasTemplateVersion: boolean;
+    templateVersion?: string;
+    hasDescriptiveName: boolean;
+    descriptiveName?: string;
+  };
+  guides: {
+    required: string[];
+    present: string[];
+    missing: string[];
+  };
+  margins: {
+    targetGlyph: string;
+    required: string[];
+    present: string[];
+    missing: string[];
+  };
+  glyphs: {
+    targetGlyph: string;
+    required: string[];
+    present: string[];
+    missing: string[];
+    pathCounts: Record<string, number>;
+    variableRequired: boolean;
+  };
+  text: {
+    allowedInNotes: TemplateTextSummary[];
+    disallowedOutsideNotes: TemplateTextSummary[];
+  };
+};
+
 export type ValidationReport = {
+  stage: ValidationStage;
   passed: boolean;
   errors: string[];
   warnings: string[];
   stats: SvgStats;
+  template?: SfSymbolTemplateReport;
   writtenFiles?: string[];
 };
+
+const DEFAULT_VALIDATION_STAGE: ValidationStage = "artwork-svg";
+const DEFAULT_TARGET_GLYPH = "Regular-M";
+const REQUIRED_TEMPLATE_GROUPS = ["Notes", "Guides", "Symbols"] as const;
+const REQUIRED_GUIDES = [
+  "Baseline-S",
+  "Baseline-M",
+  "Baseline-L",
+  "Capline-S",
+  "Capline-M",
+  "Capline-L",
+];
+const VARIABLE_TEMPLATE_GLYPHS = ["Ultralight-S", "Regular-S", "Black-S"];
 
 export async function parseSvgFromWorkspace(
   workspace: Workspace,
@@ -138,14 +203,16 @@ export function inspectGeometry(document: SvgDocument): GeometryReport {
 
 export function validateTemplateHeuristics(
   document: SvgDocument,
-  expectedSymbolName?: string,
-  strict = false,
+  options: ValidateTemplateOptions = {},
 ): ValidationReport {
+  const stage = options.stage ?? DEFAULT_VALIDATION_STAGE;
+  const strict = options.strict ?? false;
   const elements = flattenSvgElements(document.root);
   const geometry = inspectGeometry(document);
   const rootAttrs = document.root.attrs;
   const warnings = [...geometry.warnings];
   const errors: string[] = [];
+  let template: SfSymbolTemplateReport | undefined;
 
   const stats: SvgStats = {
     pathCount: geometry.paths.length,
@@ -172,7 +239,7 @@ export function validateTemplateHeuristics(
     );
   }
 
-  if (stats.hasText) {
+  if (stats.hasText && stage === "artwork-svg") {
     errors.push(
       "Live text elements are not allowed; convert text to outlined paths.",
     );
@@ -182,27 +249,29 @@ export function validateTemplateHeuristics(
     errors.push("The SVG does not contain any paths.");
   }
 
+  const strictIssuesAreErrors = strict || stage === "sf-symbol-template-svg";
+
   if (stats.hasFilters) {
     const message =
       "Filters, blurs, shadows, and filter references are fragile in SF Symbols templates.";
-    pushStrictIssue(strict, errors, warnings, message);
+    pushStrictIssue(strictIssuesAreErrors, errors, warnings, message);
   }
 
   if (stats.hasGradients) {
     const message =
       "Gradients were found. Prefer rendering annotations over manual gradients in the template SVG.";
-    pushStrictIssue(strict, errors, warnings, message);
+    pushStrictIssue(strictIssuesAreErrors, errors, warnings, message);
   }
 
   if (stats.hasStrokes) {
     const message =
       "Live strokes were found. Convert strokes to outlined filled paths before final export.";
-    pushStrictIssue(strict, errors, warnings, message);
+    pushStrictIssue(strictIssuesAreErrors, errors, warnings, message);
   }
 
   if (!stats.hasViewBox) {
     const message = "The SVG is missing a viewBox.";
-    pushStrictIssue(strict, errors, warnings, message);
+    pushStrictIssue(strictIssuesAreErrors, errors, warnings, message);
   }
 
   const openPaths = geometry.paths.filter(
@@ -245,20 +314,278 @@ export function validateTemplateHeuristics(
   }
 
   if (
-    expectedSymbolName &&
-    !document.sourcePath?.includes(expectedSymbolName)
+    options.expectedSymbolName &&
+    !document.sourcePath?.includes(options.expectedSymbolName)
   ) {
     warnings.push(
-      `Expected symbol name "${expectedSymbolName}" was not found in the SVG file path.`,
+      `Expected symbol name "${options.expectedSymbolName}" was not found in the SVG file path.`,
     );
   }
 
+  if (stage === "sf-symbol-template-svg") {
+    const templateResult = analyzeSfSymbolTemplate(document, {
+      targetGlyph: options.targetGlyph ?? DEFAULT_TARGET_GLYPH,
+      requiresVariableTemplate: options.requiresVariableTemplate ?? false,
+    });
+    template = templateResult.report;
+    errors.push(...templateResult.errors);
+  }
+
   return {
+    stage,
     passed: errors.length === 0,
     errors,
     warnings,
     stats,
+    ...(template ? { template } : {}),
   };
+}
+
+type TextElementContext = {
+  element: SvgElement;
+  parentGroups: string[];
+};
+
+type SfSymbolTemplateAnalysis = {
+  report: SfSymbolTemplateReport;
+  errors: string[];
+};
+
+function analyzeSfSymbolTemplate(
+  document: SvgDocument,
+  input: {
+    targetGlyph: string;
+    requiresVariableTemplate: boolean;
+  },
+): SfSymbolTemplateAnalysis {
+  const errors: string[] = [];
+  const notesGroup = findNamedGroup(document.root, "Notes");
+  const guidesGroup = findNamedGroup(document.root, "Guides");
+  const symbolsGroup = findNamedGroup(document.root, "Symbols");
+  const requiredGroups = {
+    Notes: Boolean(notesGroup),
+    Guides: Boolean(guidesGroup),
+    Symbols: Boolean(symbolsGroup),
+  };
+
+  for (const group of REQUIRED_TEMPLATE_GROUPS) {
+    if (!requiredGroups[group]) {
+      errors.push(`missing ${group} group`);
+    }
+  }
+
+  const textContexts = collectTextContexts(document.root);
+  const allowedText = textContexts.filter((context) =>
+    hasParentGroup(context, "Notes"),
+  );
+  const disallowedText = textContexts.filter(
+    (context) => !hasParentGroup(context, "Notes"),
+  );
+
+  if (disallowedText.length > 0) {
+    errors.push(
+      "Live text outside Notes is not allowed; convert artwork text to outlined paths.",
+    );
+  }
+
+  const templateVersion = allowedText.find((context) =>
+    elementMatchesIdentifier(context.element, "template-version"),
+  );
+  const descriptiveName = allowedText.find((context) =>
+    elementMatchesIdentifier(context.element, "descriptive-name"),
+  );
+
+  if (!templateVersion) {
+    errors.push("missing template-version");
+  } else if (
+    !/^Template v\.\d+(?:\.\d+)*$/i.test(templateVersion.element.text ?? "")
+  ) {
+    errors.push("invalid template-version; expected Template v.x.x");
+  }
+
+  const presentGuides = guidesGroup
+    ? REQUIRED_GUIDES.filter((guide) => hasElementNamed(guidesGroup, guide))
+    : [];
+  const missingGuides = REQUIRED_GUIDES.filter(
+    (guide) => !presentGuides.includes(guide),
+  );
+
+  for (const guide of missingGuides) {
+    errors.push(`missing ${guide}`);
+  }
+
+  const requiredMargins = [
+    `left-margin-${input.targetGlyph}`,
+    `right-margin-${input.targetGlyph}`,
+  ];
+  const presentMargins = guidesGroup
+    ? requiredMargins.filter((margin) => hasElementNamed(guidesGroup, margin))
+    : [];
+  const missingMargins = requiredMargins.filter(
+    (margin) => !presentMargins.includes(margin),
+  );
+
+  for (const margin of missingMargins) {
+    errors.push(`missing ${margin}`);
+  }
+
+  const requiredGlyphs = uniqueValues([
+    input.targetGlyph,
+    ...(input.requiresVariableTemplate ? VARIABLE_TEMPLATE_GLYPHS : []),
+  ]);
+  const presentGlyphs: string[] = [];
+  const missingGlyphs: string[] = [];
+  const pathCounts: Record<string, number> = {};
+
+  for (const glyph of requiredGlyphs) {
+    const glyphGroup = symbolsGroup
+      ? findNamedGroup(symbolsGroup, glyph)
+      : undefined;
+    const pathCount = glyphGroup ? countDescendantPaths(glyphGroup) : 0;
+    pathCounts[glyph] = pathCount;
+
+    if (!glyphGroup) {
+      missingGlyphs.push(glyph);
+      errors.push(`missing glyph for ${glyph}`);
+      continue;
+    }
+
+    if (pathCount === 0) {
+      missingGlyphs.push(glyph);
+      errors.push(`missing glyph paths for ${glyph}`);
+      continue;
+    }
+
+    presentGlyphs.push(glyph);
+  }
+
+  return {
+    report: {
+      targetGlyph: input.targetGlyph,
+      requiredGroups,
+      metadata: {
+        hasTemplateVersion: Boolean(templateVersion),
+        ...(templateVersion?.element.text
+          ? { templateVersion: templateVersion.element.text }
+          : {}),
+        hasDescriptiveName: Boolean(descriptiveName),
+        ...(descriptiveName?.element.text
+          ? { descriptiveName: descriptiveName.element.text }
+          : {}),
+      },
+      guides: {
+        required: REQUIRED_GUIDES,
+        present: presentGuides,
+        missing: missingGuides,
+      },
+      margins: {
+        targetGlyph: input.targetGlyph,
+        required: requiredMargins,
+        present: presentMargins,
+        missing: missingMargins,
+      },
+      glyphs: {
+        targetGlyph: input.targetGlyph,
+        required: requiredGlyphs,
+        present: presentGlyphs,
+        missing: missingGlyphs,
+        pathCounts,
+        variableRequired: input.requiresVariableTemplate,
+      },
+      text: {
+        allowedInNotes: allowedText.map(textSummary),
+        disallowedOutsideNotes: disallowedText.map(textSummary),
+      },
+    },
+    errors,
+  };
+}
+
+function collectTextContexts(root: SvgElement): TextElementContext[] {
+  const contexts: TextElementContext[] = [];
+
+  const visit = (node: SvgElement, parentGroups: string[]): void => {
+    const name = node.name.toLowerCase();
+
+    if (["text", "tspan", "textpath"].includes(name)) {
+      contexts.push({ element: node, parentGroups });
+    }
+
+    const groupName = name === "g" ? elementIdentifier(node) : undefined;
+    const nextParentGroups = groupName
+      ? [...parentGroups, groupName]
+      : parentGroups;
+
+    for (const child of node.children) {
+      visit(child, nextParentGroups);
+    }
+  };
+
+  visit(root, []);
+  return contexts;
+}
+
+function hasParentGroup(
+  context: TextElementContext,
+  groupName: string,
+): boolean {
+  return context.parentGroups.some(
+    (parentGroup) => parentGroup.toLowerCase() === groupName.toLowerCase(),
+  );
+}
+
+function textSummary(context: TextElementContext): TemplateTextSummary {
+  return {
+    ...(elementIdentifier(context.element)
+      ? { id: elementIdentifier(context.element) }
+      : {}),
+    ...(context.element.text ? { text: context.element.text } : {}),
+    parentGroups: context.parentGroups,
+  };
+}
+
+function findNamedGroup(
+  root: SvgElement,
+  groupName: string,
+): SvgElement | undefined {
+  return flattenSvgElements(root).find(
+    (element) =>
+      element.name.toLowerCase() === "g" &&
+      elementMatchesIdentifier(element, groupName),
+  );
+}
+
+function hasElementNamed(root: SvgElement, elementName: string): boolean {
+  return flattenSvgElements(root).some((element) =>
+    elementMatchesIdentifier(element, elementName),
+  );
+}
+
+function elementMatchesIdentifier(
+  element: SvgElement,
+  expectedIdentifier: string,
+): boolean {
+  const expected = expectedIdentifier.toLowerCase();
+  return [element.attrs.id, elementLabel(element)]
+    .filter(Boolean)
+    .some((identifier) => identifier?.toLowerCase() === expected);
+}
+
+function elementIdentifier(element: SvgElement): string | undefined {
+  return element.attrs.id || elementLabel(element);
+}
+
+function countDescendantPaths(root: SvgElement): number {
+  return flattenSvgElements(root).filter(
+    (element) =>
+      element.name.toLowerCase() === "path" &&
+      typeof element.attrs.d === "string" &&
+      element.attrs.d.trim().length > 0,
+  ).length;
+}
+
+function uniqueValues(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function hasFilterSignal(element: SvgElement): boolean {

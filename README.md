@@ -177,7 +177,7 @@ Until then, use the GitHub `npx` command.
 2. Use the SF Symbols app to export the template for the closest base symbol.
 3. Create or edit the symbol design in the selected SVG-capable vector editor.
 4. Export the SVG from the selected vector editor.
-5. Run `validate_svg_template`.
+5. Run `validate_svg_template` with the default `artwork-svg` stage for vector-editor preflight.
 6. Run `inspect_svg_geometry`.
 7. If using variable templates, run `compare_variable_sources`.
 8. Run `generate_annotation_plan`.
@@ -187,9 +187,10 @@ Until then, use the GitHub `npx` command.
 12. Validate the template in the SF Symbols app.
 13. Apply rendering/animation annotations manually or semi-manually.
 14. Export final symbol from SF Symbols app.
-15. Run `create_xcassets_symbol_set` when an asset catalog or Xcode integration is needed.
-16. Run `generate_swift_usage`.
-17. Test in Xcode previews/device.
+15. Run `validate_svg_template` with `stage: "sf-symbol-template-svg"` before Xcode handoff.
+16. Run `create_xcassets_symbol_set` when an asset catalog or Xcode integration is needed.
+17. Run `generate_swift_usage`.
+18. Test in Xcode previews/device.
 
 ## Resources
 
@@ -230,13 +231,15 @@ Creates a normalized brief from user intent. Optionally writes `brief.md` and `b
 
 ### `validate_svg_template`
 
-Validates an exported SVG with practical SF Symbols readiness heuristics:
+Validates an exported SVG with practical SF Symbols readiness heuristics. The default stage is `artwork-svg`, intended for vector-editor exports before final SF Symbols app import:
 
 - file exists and is SVG
 - XML parses safely
 - no raster `<image>` tags
 - no live text
 - detects filters, gradients, strokes, missing `viewBox`, missing groups, missing IDs, generic IDs, and likely open paths
+
+Use `stage: "sf-symbol-template-svg"` for final SVGs intended for SF Symbols/Xcode import. This stage requires `Notes`, `Guides`, `Symbols`, `template-version`, `Baseline-S/M/L`, `Capline-S/M/L`, target margins such as `left-margin-Regular-M`, and a target glyph group such as `Regular-M` with path data. Text is allowed only inside `Notes` in this stage.
 
 Optionally writes `validation-report.json` and `validation-report.md`.
 
@@ -273,7 +276,7 @@ Assets.xcassets/
     <symbolName>.svg
 ```
 
-The SVG is copied only when `sourceSvgPath` is provided. Existing files are not overwritten unless `overwrite: true` is passed. The generated `Contents.json` is intentionally conservative; verify/import in Xcode.
+The SVG is copied only when `sourceSvgPath` is provided. When a source is provided, the tool first validates it with `stage: "sf-symbol-template-svg"` and refuses to write a partial `.symbolset` if final template blockers are found. Existing files are not overwritten unless `overwrite: true` is passed. The generated `Contents.json` is intentionally conservative; verify/import in Xcode.
 
 ### `generate_swift_usage`
 

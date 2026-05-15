@@ -29,16 +29,20 @@ export async function runValidateSvgTemplate(
   input: ValidateSvgTemplateInput,
 ): Promise<ValidationReport> {
   let report: ValidationReport;
+  const stage = input.stage ?? "artwork-svg";
 
   try {
     const document = await parseSvgFromWorkspace(workspace, input.svgPath);
-    report = validateTemplateHeuristics(
-      document,
-      input.expectedSymbolName,
-      input.strict ?? false,
-    );
+    report = validateTemplateHeuristics(document, {
+      expectedSymbolName: input.expectedSymbolName,
+      strict: input.strict ?? false,
+      stage,
+      targetGlyph: input.targetGlyph,
+      requiresVariableTemplate: input.requiresVariableTemplate,
+    });
   } catch (error) {
     report = {
+      stage,
       passed: false,
       errors: [error instanceof Error ? error.message : String(error)],
       warnings: [],
@@ -73,11 +77,14 @@ export function validationReportMarkdown(
 ): string {
   return reportMarkdown(
     `SVG Validation Report: ${svgPath}`,
-    `Passed: ${report.passed ? "yes" : "no"}`,
+    `Stage: ${report.stage}\n\nPassed: ${report.passed ? "yes" : "no"}`,
     [
       { title: "Errors", body: bulletList(report.errors) },
       { title: "Warnings", body: bulletList(report.warnings) },
       { title: "Stats", body: fencedJson(report.stats) },
+      ...(report.template
+        ? [{ title: "SF Symbol Template", body: fencedJson(report.template) }]
+        : []),
     ],
   );
 }
@@ -91,7 +98,7 @@ export function registerValidateSvgTemplateTool(
     {
       title: "Validate SVG Template",
       description:
-        "Validate an exported SVG against custom SF Symbols readiness heuristics.",
+        "Validate an exported SVG against custom SF Symbols readiness heuristics or final template structure.",
       inputSchema: ValidateSvgTemplateInputSchema,
     },
     (args) =>

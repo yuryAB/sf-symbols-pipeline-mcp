@@ -43,13 +43,14 @@ When producing a diagnosis:
 
 1. Use `resolve_design_environment` when the editor/tooling path is unclear.
 2. Use `create_symbol_brief` when user intent needs structure.
-3. Use `validate_svg_template` for exported SVG preflight.
+3. Use `validate_svg_template` with the default `artwork-svg` stage for exported SVG preflight.
 4. Use `inspect_svg_geometry` for group/path structure.
 5. Use `compare_variable_sources` when variable symbol weights are available.
 6. Use `generate_annotation_plan` for rendering mode preparation.
 7. Use `generate_draw_guide_plan` for Draw or Variable Draw planning.
 8. Use `generate_import_checklist` before SF Symbols app and Xcode handoff.
-9. Use `create_xcassets_symbol_set` and `generate_swift_usage` after the final symbol asset is ready.
+9. Use `validate_svg_template` with `stage: "sf-symbol-template-svg"` after final SF Symbols export and before Xcode handoff.
+10. Use `create_xcassets_symbol_set` and `generate_swift_usage` after the final symbol asset is ready.
 
 ## If tools are unavailable
 

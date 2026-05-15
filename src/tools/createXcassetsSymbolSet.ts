@@ -5,6 +5,10 @@ import {
   CreateXcassetsSymbolSetInputSchema,
   type CreateXcassetsSymbolSetInput,
 } from "../schemas/xcode.js";
+import {
+  parseSvgFromWorkspace,
+  validateTemplateHeuristics,
+} from "../svg/templateAnalysis.js";
 import type { Workspace } from "../workspace.js";
 import { normalizeSymbolName } from "./createSymbolBrief.js";
 import { safeTool, toolSuccess } from "./result.js";
@@ -50,6 +54,23 @@ export async function createXcassetsSymbolSet(
   const svgFilename = `${symbolName}.svg`;
   const svgRelative = path.join(symbolSetRelative, svgFilename);
   const overwrite = input.overwrite ?? false;
+
+  if (input.sourceSvgPath) {
+    const document = await parseSvgFromWorkspace(
+      workspace,
+      input.sourceSvgPath,
+    );
+    const validation = validateTemplateHeuristics(document, {
+      expectedSymbolName: symbolName,
+      stage: "sf-symbol-template-svg",
+    });
+
+    if (!validation.passed) {
+      throw new Error(
+        `Source SVG is not an import-ready SF Symbols template: ${validation.errors.join("; ")}`,
+      );
+    }
+  }
 
   await workspace.ensureDir(symbolSetRelative);
 
